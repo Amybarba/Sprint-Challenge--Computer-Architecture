@@ -273,4 +273,38 @@ class CPU:
                 self.old_im = self.reg[self.im]
                 # stop interrupts
                 self.reg[self.im] = 0
-                
+                # clears the interrupt
+                self.reg[self.isr] &= (255 ^ bit)
+                # decrement stack pointer
+                self.reg[self.sp] -= 1
+                # push the pc to the stack
+                self.ram_write(self.reg[self.sp], self.pc)
+                # decrement stack pointer
+                self.reg[self.sp] -= 1
+                # push flags to stack
+                self.ram_write(self.reg[self.sp], self.fl)
+                # push reg to stack R0 to R6
+                for i in range(7):
+                    self.reg[self.sp] -= 1
+                    self.ram_write(self.reg[self.sp], self.reg[i])
+
+                self.pc = self.ram[0xF8 + interrupt]
+                # stop it checking interrupts by using
+                break
+
+    @property
+    def ir(self):
+        return self._instruction_register_
+
+    @ir.setter
+    def ir(self, opcode):
+        self._instruction_register_ = opcode
+        # load potential operations
+        self.operand_a = self.ram_read(self.pc + 1) if opcode >> 6 > 0 else None
+        self.operand_b = self.ram_read(self.pc + 2) if opcode >> 6 > 1 else None
+        # move program counter past any operations
+        self.pc += (opcode >> 6)
+
+    @ir.deleter
+    def ir(self):
+        self._instruction_register_ = 0
